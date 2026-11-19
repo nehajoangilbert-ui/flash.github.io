@@ -1,0 +1,9 @@
+{
+  "name": "flash-secure-auth",
+  "version": "1.0.0",
+  "description": "FLASH: password + signed challenge + OTP authentication with real SMS and email",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node test.js" },
+  "engines": { "node": ">=18" },
+  "optionalDependencies": { "nodemailer": "^6.9.14" }
+}

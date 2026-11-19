@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FLASH – Authentication That Survives Partial Compromise</title>
+<style>
+:root{--g1:#1b1464;--g2:#6d28d9;--g3:#db2777;--glass:rgba(255,255,255,.14);--edge:rgba(255,255,255,.35);--tx:#fff;--mut:rgba(255,255,255,.72);--ok:#34d399;--bad:#fb7185;--acc:#22d3ee;--in:rgba(0,0,0,.28);
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--g1:#0f0a3c;--g2:#4c1d95;--g3:#9d174d}}
+:root[data-theme="dark"]{--g1:#0f0a3c;--g2:#4c1d95;--g3:#9d174d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--tx);background:linear-gradient(135deg,var(--g1),var(--g2) 55%,var(--g3)) fixed;display:flex;justify-content:center;padding:24px 14px 90px}
+.blob{position:fixed;border-radius:50%;filter:blur(70px);opacity:.5;z-index:0;pointer-events:none}
+.b1{width:320px;height:320px;background:#22d3ee;top:-80px;left:-80px}.b2{width:380px;height:380px;background:#f472b6;bottom:-120px;right:-100px}
+main{position:relative;z-index:1;width:100%;max-width:520px}
+h1{margin:0;font-size:28px;letter-spacing:.5px}
+.sub{color:var(--mut);margin:4px 0 18px;font-size:14px}
+.dots{display:flex;gap:6px;margin-bottom:14px}
+.dots i{flex:1;height:5px;border-radius:9px;background:rgba(255,255,255,.2)}
+.dots i.on{background:var(--acc)}.dots i.done{background:var(--ok)}
+.card{background:var(--glass);border:1px solid var(--edge);border-radius:24px;padding:26px;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.step{display:none}.step.show{display:block;animation:in .35s ease}
+@keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+h2{margin:0 0 6px;font-size:20px}
+p.d{margin:0 0 16px;color:var(--mut);font-size:14px;line-height:1.5}
+label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--mut);margin:12px 0 6px}
+input,textarea{width:100%;background:var(--in);border:1px solid var(--edge);border-radius:12px;padding:12px 14px;color:var(--tx);font:inherit;outline:none}
+input:focus,textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(34,211,238,.25)}
+textarea{min-height:120px;font:12px ui-monospace,Menlo,Consolas,monospace;resize:vertical}
+input.otp{font:600 26px ui-monospace,Menlo,Consolas,monospace;letter-spacing:8px;text-align:center}
+button{margin-top:18px;width:100%;padding:13px;border:0;border-radius:12px;font:600 15px inherit;font-family:inherit;color:#fff;cursor:pointer;background:linear-gradient(90deg,#06b6d4,#8b5cf6,#ec4899);transition:transform .15s,filter .15s}
+button:hover{filter:brightness(1.1);transform:translateY(-1px)}
+button.ghost{background:var(--in);border:1px solid var(--edge);margin-top:10px}
+.msg{min-height:20px;margin-top:12px;font-size:13px}.msg.err{color:var(--bad)}.msg.ok{color:var(--ok)}
+.timer{display:inline-block;margin-top:10px;padding:5px 12px;border-radius:99px;background:var(--in);font:600 13px ui-monospace,monospace;color:var(--acc)}
+.timer.low{color:var(--bad)}
+.kv{background:var(--in);border-radius:12px;padding:10px 12px;margin-top:10px;font:12px ui-monospace,Menlo,Consolas,monospace;word-break:break-all;color:var(--mut)}
+.kv b{color:var(--tx);font-family:inherit}
+.note{margin-top:14px;font-size:12px;color:var(--mut);border-left:3px solid var(--acc);padding-left:10px;line-height:1.5}
+#fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:5;width:auto;margin:0;padding:12px 18px;border-radius:99px}
+#fab span{background:var(--bad);border-radius:99px;padding:1px 7px;margin-left:6px;font-size:12px}
+#drawer{position:fixed;z-index:6;right:12px;left:12px;max-width:420px;margin-left:auto;bottom:calc(76px + env(safe-area-inset-bottom,0px));max-height:60vh;overflow:auto;display:none;background:rgba(20,10,60,.82);border:1px solid var(--edge);border-radius:20px;padding:14px;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+#drawer.open{display:block}
+#drawer h3{margin:8px 0;font-size:13px;color:var(--acc);text-transform:uppercase;letter-spacing:1px}
+.m{background:var(--glass);border:1px solid var(--edge);border-radius:12px;padding:10px;margin-bottom:8px;font-size:13px}
+.m small{color:var(--mut)}.m pre{white-space:pre-wrap;word-break:break-all;margin:6px 0 0;font:11px ui-monospace,monospace;max-height:110px;overflow:auto}
+.m button{margin:6px 6px 0 0;width:auto;padding:5px 10px;font-size:12px;border-radius:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.chips span{background:var(--in);border:1px solid var(--edge);border-radius:99px;padding:5px 11px;font-size:12px}
+.chips.alt span{border-color:var(--bad)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+@media(max-width:420px){.grid{grid-template-columns:1fr}}
+.tile{background:var(--in);border:1px solid var(--edge);border-radius:14px;padding:12px}
+.tile b{display:block;margin-bottom:4px;font-size:14px}.tile small{color:var(--mut);font-size:12px;line-height:1.45}
+.how{margin:0 0 4px;padding-left:20px;color:var(--mut);font-size:13px;line-height:1.7}
+.chk{list-style:none;padding:0;margin:12px 0 0}.chk li{background:var(--in);border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:13px}.chk li:before{content:"✓ ";color:var(--ok);font-weight:700}
+button.ghost.danger{border-color:var(--bad);color:#fecdd3}
+</style>
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div>
+<main>
+  <h1>⚡ FLASH</h1>
+  <div class="sub">Authentication that survives partial compromise</div>
+  <div class="dots" id="dots"></div>
+  <div class="card">
+
+    <section class="step show" id="home">
+      <h2>Welcome to FLASH</h2>
+      <p class="d">A local authentication and session protocol designed so that one stolen factor never opens the whole account.</p>
+      <div class="chips"><span>PBKDF2 password verifier</span><span>ECDSA P-256 keys</span><span>8-digit OTP · 3 min</span><span>5-min sessions</span><span>Lockout after 5 misses</span></div>
+      <div class="grid">
+        <div class="tile"><b>🔑 Password</b><small>Slow key derivation (200,000 rounds) with a random salt. The password itself is never stored.</small></div>
+        <div class="tile"><b>🧬 Passkeys</b><small>A public and private key pair is made at sign-up. The private key signs a fresh challenge at every login.</small></div>
+        <div class="tile"><b>📱 One-time code</b><small>8 digits, valid for 3 minutes, usable once, 3 tries per code.</small></div>
+        <div class="tile"><b>⏱ Short sessions</b><small>A 5-minute token with a live timer that you can revoke at any time.</small></div>
+      </div>
+      <label>What it defends against</label>
+      <div class="chips alt"><span>One leaked factor</span><span>Stolen session token</span><span>Replayed traffic</span><span>Abused recovery</span></div>
+      <label>How it works</label>
+      <ol class="how"><li>Register with email, phone and password, then confirm your phone.</li><li>Receive your permanent public and private keys by email.</li><li>Log in: password, phone OTP, signed challenge, then a final OTP.</li><li>Enter a protected session that expires and can be revoked.</li></ol>
+      <button data-goto="reg">Get started</button>
+      <button class="ghost" data-goto="login">I already have an account</button>
+      <div class="note">OTPs are sent by SMS to your phone and your passkeys by email. Enter the phone in international format, e.g. +919876543210.</div>
+    </section>
+
+    <section class="step" id="reg">
+      <h2>1 · Create account</h2>
+      <p class="d">Enter your email, phone and a password. An OTP is sent to your phone.</p>
+      <label>Email</label><input id="rEmail" type="email" placeholder="you@example.com" autocomplete="off">
+      <label>Phone</label><input id="rPhone" type="tel" placeholder="+919876543210" autocomplete="off">
+      <label>Password (min 8)</label><input id="rPass" type="password" autocomplete="new-password">
+      <button id="rGo">Send phone OTP</button>
+      <button class="ghost" data-goto="login">I already have an account</button>
+      <div class="msg" id="rMsg"></div>
+    </section>
+
+    <section class="step" id="regotp">
+      <h2>2 · Verify your phone</h2>
+      <p class="d">Enter the 8-digit OTP sent to your phone by SMS.</p>
+      <input class="otp" id="roIn" maxlength="8" inputmode="numeric" placeholder="········">
+      <div class="timer" data-otp>03:00</div>
+      <button id="roGo">Verify &amp; generate keys</button>
+      <div class="msg" id="roMsg"></div>
+    </section>
+
+    <section class="step" id="keys">
+      <h2>3 · Passkeys issued</h2>
+      <p class="d">Your permanent public and private keys were sent to your email. Keep the private key safe: you need it at every login.</p>
+      <div class="kv"><b>Algorithm:</b> ECDSA P-256 · SHA-256<br><b>Server stores:</b> public key + password verifier only</div>
+      <div class="note">Note: emailing a private key is convenient but risky. In production it should stay on the user’s device and never be transmitted.</div>
+      <button data-goto="login">Continue to login</button>
+    </section>
+
+    <section class="step" id="login">
+      <h2>4 · Login</h2>
+      <p class="d">Email, phone and password are checked against a slow PBKDF2 verifier.</p>
+      <label>Email</label><input id="lEmail" type="email" autocomplete="off">
+      <label>Phone</label><input id="lPhone" type="tel" autocomplete="off">
+      <label>Password</label><input id="lPass" type="password" autocomplete="current-password">
+      <button id="lGo">Verify &amp; send OTP</button>
+      <button class="ghost" data-goto="reg">Create new account</button>
+      <div class="msg" id="lMsg"></div>
+    </section>
+
+    <section class="step" id="loginotp">
+      <h2>5 · Phone OTP</h2>
+      <p class="d">Enter the login OTP sent to your phone.</p>
+      <input class="otp" id="loIn" maxlength="8" inputmode="numeric" placeholder="········">
+      <div class="timer" data-otp>03:00</div>
+      <button id="loGo">Verify OTP</button>
+      <div class="msg" id="loMsg"></div>
+    </section>
+
+    <section class="step" id="challenge">
+      <h2>6 · Cryptographic challenge</h2>
+      <p class="d">The server issued a fresh random challenge. Paste your private key from the email; it signs the challenge in your browser and the server verifies with your public key.</p>
+      <div class="kv"><b>Challenge:</b> <span id="chNonce"></span></div>
+      <label>Private key (PEM)</label><textarea id="chKey" placeholder="-----BEGIN PRIVATE KEY-----"></textarea>
+      <button id="chGo">Sign &amp; verify</button>
+      <div class="kv" id="chSig" style="display:none"></div>
+      <div class="msg" id="chMsg"></div>
+    </section>
+
+    <section class="step" id="finalotp">
+      <h2>7 · Final 8-digit OTP</h2>
+      <p class="d">Signature verified. A one-time code valid for 3 minutes was sent to your phone.</p>
+      <input class="otp" id="foIn" maxlength="8" inputmode="numeric" placeholder="········">
+      <div class="timer" data-otp>03:00</div>
+      <button id="foGo">Start session</button>
+      <div class="msg" id="foMsg"></div>
+    </section>
+
+    <section class="step" id="revoked">
+      <h2>🚫 Session revoked</h2>
+      <p class="d">This token is now dead. Even if someone stole it, they can no longer use it.</p>
+      <div class="kv"><b>Revoked token:</b> <span id="rvTok"></span></div>
+      <button id="rvTest">Test the revoked token</button>
+      <div class="msg" id="rvMsg"></div>
+      <button class="ghost" id="rvGo">Back to login</button>
+    </section>
+
+    <section class="step" id="locked">
+      <h2>🔒 Session locked</h2>
+      <p class="d">Too many wrong attempts. All OTPs, challenges and sessions were invalidated to protect the account.</p>
+      <div class="timer low" id="lkTimer">Unlocks in 05:00</div>
+      <button id="lkGo" style="display:none">Back to login</button>
+    </section>
+
+    <section class="step" id="session">
+      <h2>8 · Session active ✅</h2>
+      <p class="d">You are authenticated. The session expires automatically or can be revoked now.</p>
+      <div class="kv"><b>User:</b> <span id="sUser"></span><br><b>Token:</b> <span id="sTok"></span></div>
+      <div class="timer" id="sTimer">05:00</div>
+      <button id="sGo">Continue with the session →</button>
+      <button class="ghost" id="sLogout">Log out</button>
+      <button class="ghost danger" id="sRevoke">Revoke session</button>
+    </section>
+
+    <section class="step" id="workspace">
+      <h2>Secure workspace 🔓</h2>
+      <p class="d">Welcome, <b id="wUser"></b>. You are inside the protected area and every layer was verified.</p>
+      <ul class="chk"><li>Password checked against the PBKDF2 verifier</li><li>Phone confirmed with a one-time code</li><li>Private-key signature verified with your public key</li><li>Final 8-digit OTP accepted and then burned</li></ul>
+      <div class="kv"><b>Signed in at:</b> <span id="wAt"></span><br><b>Token:</b> <span id="wTok"></span><br><b>Session ends in:</b> <span id="wTimer">05:00</span></div>
+      <div class="note">In a real app, every protected page or API call would need this token. Revoking or letting it expire ends access immediately.</div>
+      <button class="ghost" id="wLogout">Log out</button>
+      <button class="ghost danger" id="wRevoke">Revoke session</button>
+    </section>
+
+  </div>
+</main>
+
+
+<script>
+(function(){
+"use strict";
+var $=function(s){return document.querySelector(s)},enc=new TextEncoder();
+var STEPS=["reg","regotp","keys","login","loginotp","challenge","finalotp","session","workspace"];
+function b64(b){var a=new Uint8Array(b),s="";for(var i=0;i<a.length;i++)s+=String.fromCharCode(a[i]);return btoa(s)}
+function unb64(s){return Uint8Array.from(atob(s),function(c){return c.charCodeAt(0)})}
+function unpem(p){return unb64(p.replace(/-----[^-]+-----|\s/g,""))}
+function setMsg(id,t,ok){var e=$(id);e.textContent=t||"";e.className="msg "+(t?(ok?"ok":"err"):"")}
+function fmt(ms){var s=Math.max(0,Math.ceil(ms/1000));return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")}
+var dots=$("#dots");STEPS.forEach(function(){dots.appendChild(document.createElement("i"))});
+function show(id){
+  document.querySelectorAll(".step").forEach(function(s){s.classList.toggle("show",s.id===id)});
+  var idx=STEPS.indexOf(id);
+  [].forEach.call(dots.children,function(d,i){d.className=i<idx?"done":i===idx?"on":""});
+}
+document.querySelectorAll("[data-goto]").forEach(function(b){b.onclick=function(){show(b.dataset.goto)}});
+
+var regId=null,flowId=null,loginEmail=null,nonce=null,otpEnd=0,sess=null,lockEnd=0;
+function clearAll(){regId=flowId=nonce=sess=null;otpEnd=0;document.querySelectorAll("input,textarea").forEach(function(i){i.value=""})}
+
+/* ---- talk to the server ---- */
+async function api(path,body,token){
+  var h={"Content-Type":"application/json"};if(token)h.Authorization="Bearer "+token;
+  var r=await fetch("/api"+path,{method:body?"POST":"GET",headers:h,body:body?JSON.stringify(body):undefined});
+  var j={};try{j=await r.json()}catch(e){}
+  if(j.locked){lockEnd=Date.now()+(j.lockSeconds||300)*1000;clearAll();show("locked");throw null}
+  if(!r.ok){var er=new Error(j.error||"Request failed");er.left=j.left;throw er}
+  return j;
+}
+function fail(id,e){
+  if(!e||!e.message){setMsg(id,"");return}
+  if(/fetch|NetworkError|Load failed/i.test(e.message)){setMsg(id,"Cannot reach the server. Start it (START.bat or: node server.js) and open http://localhost:3000 in the browser.");return}
+  setMsg(id,e.message+(typeof e.left==="number"?" ("+e.left+" attempts before lockout)":""));
+}
+
+/* register */
+$("#rGo").onclick=async function(){
+  setMsg("#rMsg","Sending OTP to your phone…",true);
+  try{
+    var j=await api("/register",{email:$("#rEmail").value,phone:$("#rPhone").value,password:$("#rPass").value});
+    regId=j.regId;otpEnd=Date.now()+j.expiresIn;setMsg("#rMsg","");show("regotp");
+  }catch(e){fail("#rMsg",e)}
+};
+$("#roGo").onclick=async function(){
+  setMsg("#roMsg","Generating keys and emailing them…",true);
+  try{await api("/register/verify",{regId:regId,otp:$("#roIn").value});$("#roIn").value="";setMsg("#roMsg","");show("keys")}
+  catch(e){fail("#roMsg",e)}
+};
+/* login */
+$("#lGo").onclick=async function(){
+  setMsg("#lMsg","Checking…",true);
+  try{
+    loginEmail=$("#lEmail").value.trim().toLowerCase();
+    var j=await api("/login",{email:loginEmail,phone:$("#lPhone").value,password:$("#lPass").value});
+    flowId=j.flowId;otpEnd=Date.now()+j.expiresIn;setMsg("#lMsg","");show("loginotp");
+  }catch(e){fail("#lMsg",e)}
+};
+$("#loGo").onclick=async function(){
+  try{
+    var j=await api("/login/otp",{flowId:flowId,otp:$("#loIn").value});
+    nonce=j.nonce;$("#chNonce").textContent=nonce;$("#chSig").style.display="none";$("#chKey").value="";
+    $("#loIn").value="";setMsg("#loMsg","");show("challenge");
+  }catch(e){fail("#loMsg",e)}
+};
+/* sign in the browser (private key never leaves it); server verifies with the public key */
+$("#chGo").onclick=async function(){
+  var sigB64="";
+  try{
+    var prv=await crypto.subtle.importKey("pkcs8",unpem($("#chKey").value),{name:"ECDSA",namedCurve:"P-256"},false,["sign"]);
+    var sig=await crypto.subtle.sign({name:"ECDSA",hash:"SHA-256"},prv,enc.encode(nonce+"|"+loginEmail));
+    sigB64=b64(sig);
+    $("#chSig").style.display="block";$("#chSig").innerHTML="<b>Signature:</b> "+sigB64.slice(0,60)+"…";
+  }catch(x){sigB64=""}   /* bad key -> empty signature, so the server counts the failed attempt */
+  try{
+    var j=await api("/login/challenge",{flowId:flowId,signature:sigB64});
+    otpEnd=Date.now()+j.expiresIn;setMsg("#chMsg","Signature verified ✓ Final OTP sent to your phone.",true);
+    setTimeout(function(){setMsg("#chMsg","");show("finalotp")},900);
+  }catch(e){fail("#chMsg",e)}
+};
+$("#foGo").onclick=async function(){
+  try{
+    var j=await api("/login/final",{flowId:flowId,otp:$("#foIn").value});
+    sess={token:j.token,user:j.email,end:Date.now()+j.expiresIn};flowId=null;
+    $("#sUser").textContent=sess.user;$("#sTok").textContent=sess.token;$("#foIn").value="";setMsg("#foMsg","");show("session");
+  }catch(e){fail("#foMsg",e)}
+};
+/* session */
+$("#sGo").onclick=async function(){
+  if(!sess)return;
+  try{
+    var j=await api("/session",null,sess.token);sess.end=Date.now()+j.expiresIn;
+    $("#wUser").textContent=j.email;$("#wTok").textContent=sess.token.slice(0,12)+"…";$("#wAt").textContent=new Date().toLocaleTimeString();show("workspace");
+  }catch(e){endSession("Session expired. Please login again.")}
+};
+function endSession(msg,ok){clearAll();$("#lPass").value="";show("login");setMsg("#lMsg",msg||"",ok)}
+var rvTok=null;
+async function logout(){var t=sess&&sess.token;try{if(t)await api("/logout",{},t)}catch(e){}endSession("You have been logged out.",true)}
+async function revoke(){var t=sess&&sess.token;if(!t)return;try{await api("/logout",{},t)}catch(e){}rvTok=t;$("#rvTok").textContent=t;setMsg("#rvMsg","");sess=null;show("revoked")}
+$("#sLogout").onclick=logout;$("#wLogout").onclick=logout;$("#sRevoke").onclick=revoke;$("#wRevoke").onclick=revoke;
+$("#rvTest").onclick=async function(){try{await api("/session",null,rvTok);setMsg("#rvMsg","Token still accepted!")}catch(e){setMsg("#rvMsg","Rejected \u2713 The server refused the revoked token.",true)}};
+$("#rvGo").onclick=function(){endSession()};
+$("#lkGo").onclick=function(){lockEnd=0;setMsg("#lMsg","");show("login")};
+
+/* timers */
+setInterval(function(){
+  document.querySelectorAll("[data-otp]").forEach(function(t){
+    var l=otpEnd?otpEnd-Date.now():0;t.textContent=fmt(l);t.classList.toggle("low",l<30000)});
+  if($("#locked").classList.contains("show")){var r=lockEnd-Date.now();
+    $("#lkTimer").textContent=r>0?"Unlocks in "+fmt(r):"Lock period over";$("#lkGo").style.display=r>0?"none":"block"}
+  if(sess){var l=sess.end-Date.now();$("#sTimer").textContent="Session expires in "+fmt(l);$("#wTimer").textContent=fmt(l);
+    if(l<=0)endSession("Session expired. Please login again.")}
+},250);
+show("home");
+})();
+</script>
+</body>
+</html>
